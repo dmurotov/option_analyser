@@ -1,2 +1,2 @@
-# option_analyser
+# option_analyzer
 Option Analyzer Buy Sell
