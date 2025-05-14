@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 import datetime
+import numpy as np
 
 st.set_page_config(page_title="Опционный анализатор", layout="centered")
-st.title("📊 Опционный анализатор (Analyze + IV/HV)")
+st.title("📊 Опционный анализатор (Analyze + IV/HV + BreakEven + P/L)")
 
 st.markdown("Введите параметры опциона **вручную** или **загрузите CSV-файл** с колонками:\n"
             "`Ticker, Expiry, Type, Premium, Strike, IV, HV` (Type = Call/Put)")
@@ -48,6 +50,16 @@ df["Grade"] = (df["Premium"] * 100) / df["Strike"]
 mean_iv = df["IV"].mean()
 df["Средняя IV"] = mean_iv
 
+# Break-Even
+def calc_breakeven(row):
+    if row["Type"] == "Call":
+        return row["Strike"] + row["Premium"]
+    else:  # Put
+        return row["Strike"] - row["Premium"]
+
+df["Break-Even"] = df.apply(calc_breakeven, axis=1)
+
+# Рекомендации
 def analyze(row):
     if row["Type"] == "Put":
         if row["IV"] < row["HV"] and row["IV"] < row["Средняя IV"]:
@@ -84,6 +96,7 @@ def highlight(row):
         return ["background-color: #f8d7da"] * len(row)  # красный
     return [""] * len(row)
 
+# Отображение таблицы
 st.subheader("📈 Результаты анализа:")
 st.dataframe(df.style.format({
     "Premium": "{:.2f}",
@@ -91,9 +104,34 @@ st.dataframe(df.style.format({
     "IV": "{:.2f}",
     "HV": "{:.2f}",
     "Grade": "{:.2f}",
-    "Средняя IV": "{:.2f}"
+    "Средняя IV": "{:.2f}",
+    "Break-Even": "{:.2f}"
 }).apply(highlight, axis=1), use_container_width=True)
 
+# Выбор строки для графика
+st.subheader("📉 Построение P/L графика")
+
+row_index = st.selectbox("Выберите строку для графика", options=df.index, format_func=lambda x: f"{df.loc[x, 'Ticker']} {df.loc[x, 'Type']} {df.loc[x, 'Strike']}")
+
+row = df.loc[row_index]
+spot_prices = np.linspace(row["Strike"] * 0.8, row["Strike"] * 1.2, 100)
+
+if row["Type"] == "Call":
+    profit = np.maximum(spot_prices - row["Strike"], 0) - row["Premium"]
+else:  # Put
+    profit = np.maximum(row["Strike"] - spot_prices, 0) - row["Premium"]
+
+fig, ax = plt.subplots()
+ax.plot(spot_prices, profit, label="P/L", color="blue")
+ax.axhline(0, color="black", linestyle="--")
+ax.axvline(row["Break-Even"], color="red", linestyle="--", label=f"Break-Even: {row['Break-Even']:.2f}")
+ax.set_title(f"{row['Ticker']} {row['Type']} Option P/L")
+ax.set_xlabel("Spot Price at Expiration")
+ax.set_ylabel("Profit / Loss")
+ax.legend()
+st.pyplot(fig)
+
+# Скачать результат
 csv = df.to_csv(index=False).encode("utf-8")
 st.download_button("📥 Скачать результат в CSV", data=csv, file_name="option_analysis.csv", mime="text/csv")
 
@@ -102,5 +140,6 @@ with st.expander("ℹ️ Как работает анализ?"):
     - **Grade = Premium / Strike × 100**
     - **IV < HV** = волатильность недооценена, выгодно покупать
     - **IV > HV и Grade > 10** = высокая премия и волатильность — можно продать
-    - Анализ работает отдельно для Call и Put
+    - **Break-Even** = точка безубыточности (Strike ± Premium)
+    - На графике показан P/L в день экспирации
     """)
