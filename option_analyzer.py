@@ -13,7 +13,7 @@ st.markdown("Введите параметры опциона **вручную**
 uploaded_file = st.file_uploader("Загрузить CSV-файл", type="csv")
 
 if not uploaded_file:
-    st.subheader("Ввод вручную...")
+    st.subheader("Ввод вручную...⬇️")
 
     ticker = st.text_input("Тикер", value="AAPL")
     expiry = st.date_input("Срок действия опциона", min_value=datetime.date.today())
@@ -142,4 +142,13 @@ with st.expander("ℹ️ Как работает анализ?"):
     - **IV > HV и Grade > 10** = высокая премия и волатильность — можно продать
     - **Break-Even** = точка безубыточности (Strike ± Premium)
     - На графике показан P/L в день экспирации
+    - -----------Пример заполнениия----------------
+    - Ticker: AAPL
+    - Expiry: 2025/06/25
+    - Type: Call/Put
+    - Premium: 5.00
+    - Strike: 150.00
+    - IV: 20.00
+    - HV: 15.00
+    """)
     """)
